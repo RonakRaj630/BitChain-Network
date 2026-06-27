@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Create Account{% endblock %}
+
+{% block content %}
+<div class="auth-page" style="align-items:flex-start;padding-top:5rem;">
+  <div class="auth-card fade-in" style="max-width:540px;">
+    <div style="text-align:center;margin-bottom:1.5rem;">
+      <div style="width:60px;height:60px;background:linear-gradient(135deg,#a855f7,#ec4899);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 1rem;">🔑</div>
+      <div class="auth-title">Create Account</div>
+      <div class="auth-sub">Generate your Bitcoin keypair and secure it with a password</div>
+    </div>
+
+    {% if msg %}
+    <div class="alert {{ 'alert-error' if '❌' in msg else 'alert-success' }}">{{ msg }}</div>
+    {% endif %}
+
+    <!-- Step 1: Generate Keys -->
+    {% if not generated %}
+    <div id="step1">
+      <div class="alert alert-info" style="margin-bottom:1.5rem;">
+        ℹ️ Click "Generate Keys" to create a new Bitcoin address and private key. We never transmit your private key.
+      </div>
+
+      <button type="button" class="btn btn-primary w-full btn-lg" onclick="generateKeys()">
+        ⚡ Generate Keys
+      </button>
+
+      <div class="auth-divider">already have an account?</div>
+      <a href="{{ url_for('login') }}" class="btn btn-outline w-full" style="justify-content:center;">Login</a>
+    </div>
+
+    <!-- Step 2: Generated, fill details -->
+    <div id="step2" style="display:none;">
+      <div class="alert alert-success">✅ Keys generated! Save your private key now before continuing.</div>
+
+      <div class="form-group">
+        <label class="form-label">Your Bitcoin Address</label>
+        <div class="key-box" id="pubAddrBox" onclick="copyText('pubAddr', this)">
+          <span class="key-copy-hint" style="background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px;"><i class="fas fa-copy"></i> 📋 copy</span>
+          <br>
+          <span id="pubAddr" style="word-break: break-all;"></span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" style="color:#fca5a5;">⚠️ Private Key — Save This Safely!</label>
+        <div class="key-box" id="privKeyBox" onclick="copyText('privKey', this)" style="border-color:rgba(239,68,68,0.4);">
+          <span class="key-copy-hint" style="background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px;"><i class="fas fa-copy"></i> 📋 copy</span>
+          <br>
+          <span id="privKey" style="color:#fca5a5;"></span>
+        </div>
+        <div style="font-size:12px;color:#f87171;margin-top:0.4rem;">
+          ⚠️ Store this somewhere safe. If you lose it, your funds are gone forever.
+        </div>
+      </div>
+
+      <form action="{{ url_for('register') }}" method="post">
+        <input type="hidden" name="address" id="hiddenAddr">
+        <input type="hidden" name="privateKey" id="hiddenPriv">
+
+        <div class="form-group">
+          <label class="form-label">Email (for account recovery)</label>
+          <input type="email" name="email" class="form-input" placeholder="you@example.com">
+          <div style="font-size:12px;color:var(--text-muted);margin-top:0.3rem;">Used only for recovery — never shared.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" name="password" class="form-input" placeholder="Min 8 characters" required minlength="8">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Confirm Password</label>
+          <input type="password" name="confirm_password" class="form-input" placeholder="Repeat password" required>
+        </div>
+
+        <label class="checkbox-row mb-3" style="align-items:flex-start;gap:0.75rem;">
+          <input type="checkbox" required style="margin-top:3px;">
+          <span style="font-size:13px;color:var(--text-muted);">I have saved my private key and understand that losing it means losing access to my funds permanently.</span>
+        </label>
+
+        <button type="submit" class="btn btn-primary w-full btn-lg">
+          ✅ Create Account
+        </button>
+      </form>
+    </div>
+
+    {% else %}
+    <!-- Already submitted with keys -->
+    <form action="{{ url_for('register') }}" method="post">
+      <input type="hidden" name="address" value="{{ generated.address }}">
+      <input type="hidden" name="privateKey" value="{{ generated.privateKey }}">
+
+      <div class="form-group">
+        <label class="form-label">Email (for recovery)</label>
+        <input type="email" name="email" class="form-input" placeholder="you@example.com">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" name="password" class="form-input" required minlength="8">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Confirm Password</label>
+        <input type="password" name="confirm_password" class="form-input" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full btn-lg">Create Account</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function generateKeys() {
+  fetch('{{ url_for("api_generate_keys") }}')
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('pubAddr').textContent  = data.address;
+      document.getElementById('privKey').textContent  = data.privateKey;
+      document.getElementById('hiddenAddr').value     = data.address;
+      document.getElementById('hiddenPriv').value     = data.privateKey;
+      document.getElementById('step1').style.display  = 'none';
+      document.getElementById('step2').style.display  = 'block';
+    })
+    .catch(() => alert('Failed to generate keys — is the server running?'));
+}
+
+function copyText(id, box) {
+  const text = document.getElementById(id).textContent;
+  
+  function showSuccess() {
+    const hint = box.querySelector('.key-copy-hint');
+    if (hint) {
+      hint.innerHTML = '✅ copied!';
+      setTimeout(() => { hint.innerHTML = '📋 copy'; }, 2000);
+    }
+  }
+
+  // Use clipboard API if available (HTTPS/localhost)
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(showSuccess);
+  } else {
+    // Fallback for HTTP (local IP testing)
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    textArea.style.top = "-999999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      showSuccess();
+    } catch (err) {
+      alert("Failed to copy text. Please select and copy manually.");
+    }
+    textArea.remove();
+  }
+}
+</script>
+{% endblock %}

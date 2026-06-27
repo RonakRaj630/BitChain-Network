@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Search: {{ query }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title">🔍 Search Results</div>
+  <div class="page-subtitle">Query: <span style="color:#60a5fa;font-family:'Share Tech Mono',monospace;font-size:13px;">{{ query }}</span></div>
+</div>
+<div class="main-content">
+  {% if result_type == 'block' %}
+    <div class="alert alert-success mb-2">Found a Block — redirecting…</div>
+  {% elif result_type == 'tx' %}
+    <div class="alert alert-success mb-2">Found a Transaction — redirecting…</div>
+  {% elif result_type == 'address' %}
+    <div class="alert alert-success mb-2">Found an Address — redirecting…</div>
+  {% else %}
+    <div class="card">
+      <div class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <div class="empty-text">No results found</div>
+        <div class="text-muted mt-2">Try searching for a block hash, transaction ID, or Bitcoin address</div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-badge fade-in">
+    <span style="width:6px;height:6px;background:#22c55e;border-radius:50%;box-shadow:0 0 8px #22c55e;display:inline-block;"></span>
+    Network Live &nbsp;·&nbsp; Python Blockchain
+  </div>
+
+  <h1 class="hero-title fade-in-2">
+    Build, Mine &amp;<br>Explore Bitcoin
+  </h1>
+
+  <p class="hero-sub fade-in-3">
+    A fully working Bitcoin-like blockchain built from scratch in Python.
+    Real secp256k1 cryptography, Proof of Work, UTXO model, and P2P networking.
+  </p>
+
+  <div class="hero-cta fade-in-4">
+    {% if session.get('address') %}
+      <a href="{{ url_for('wallet') }}" class="btn btn-primary btn-lg">Open Wallet</a>
+      <a href="{{ url_for('blocks') }}" class="btn btn-outline btn-lg">Explore Blocks</a>
+    {% else %}
+      <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">🚀 Create Account</a>
+      <a href="{{ url_for('login') }}" class="btn btn-outline btn-lg">Login &amp; Mine</a>
+    {% endif %}
+  </div>
+
+  <!-- Live stats ticker -->
+  <div class="live-ticker fade-in-4">
+    <div class="ticker-item">
+      <div class="ticker-val" id="tick-blocks">{{ stats.block_count }}</div>
+      <div class="ticker-key">Blocks Mined</div>
+    </div>
+    <div class="ticker-item">
+      <div class="ticker-val" id="tick-txns">{{ stats.tx_count }}</div>
+      <div class="ticker-key">Transactions</div>
+    </div>
+    <div class="ticker-item">
+      <div class="ticker-val">3.125</div>
+      <div class="ticker-key">BTC Reward</div>
+    </div>
+    <div class="ticker-item">
+      <div class="ticker-val" id="tick-mempool">{{ stats.mempool_count }}</div>
+      <div class="ticker-key">Mempool Txns</div>
+    </div>
+    <div class="ticker-item">
+      <div class="ticker-val" id="tick-miners">{{ stats.miner_count }}</div>
+      <div class="ticker-key">Active Miners</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── LATEST BLOCKS PREVIEW ── -->
+<div class="main-content" style="margin-top:-2rem;">
+  <div class="flex-between mb-2">
+    <div>
+      <div class="section-title">Latest Blocks</div>
+      <div class="section-sub">Most recently mined blocks on the network</div>
+    </div>
+    <a href="{{ url_for('blocks') }}" class="btn btn-ghost">View All →</a>
+  </div>
+
+  <div class="card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Height</th>
+          <th>Block Hash</th>
+          <th>Transactions</th>
+          <th>Size</th>
+          <th>Mined By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for block in latest_blocks %}
+        <tr>
+          <td><strong style="font-family:'Orbitron',monospace;font-size:13px;">{{ block.Height }}</strong></td>
+          <td>
+            <a class="hash-link" href="{{ url_for('block_detail', block_hash=block.BlockHeader.blockHash) }}">
+              {{ block.BlockHeader.blockHash[:32] }}…
+            </a>
+          </td>
+          <td>{{ block.TxCount }}</td>
+          <td>{{ block.BlockSize }} B</td>
+          <td>
+            {% if block.Txs %}
+              {% set coinbase_out = block.Txs[0].tx_outs[0] if block.Txs[0].tx_outs else None %}
+              <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:#a78bfa;">
+                {% if coinbase_out %}{{ coinbase_out.script_pubKey.cmds[2][:12] if coinbase_out.script_pubKey.cmds|length > 2 else 'Coinbase' }}{% endif %}
+              </span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted" style="padding:2rem;">No blocks yet — start mining!</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── FEATURES ── -->
+  <div class="features" style="padding:4rem 0;">
+    <div class="text-center mb-3">
+      <div class="section-title">How It Works</div>
+      <div class="section-sub">Real Bitcoin concepts implemented from scratch</div>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature-card fade-in">
+        <div class="feature-icon">🔐</div>
+        <div class="feature-title">secp256k1 ECC</div>
+        <div class="feature-desc">Real elliptic curve cryptography using the exact same curve as Bitcoin. Private keys, public keys, and ECDSA signatures all implemented in pure Python.</div>
+      </div>
+      <div class="feature-card fade-in-2">
+        <div class="feature-icon">⛏️</div>
+        <div class="feature-title">Proof of Work</div>
+        <div class="feature-desc">SHA-256 double-hash mining with adjustable difficulty target. Miners compete to find a nonce that produces a hash below the target.</div>
+      </div>
+      <div class="feature-card fade-in-3">
+        <div class="feature-icon">📜</div>
+        <div class="feature-title">P2PKH Scripts</div>
+        <div class="feature-desc">Pay-to-Public-Key-Hash script execution with OP_DUP, OP_HASH160, OP_EQUALVERIFY, and OP_CHECKSIG — just like real Bitcoin transactions.</div>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">🌐</div>
+        <div class="feature-title">P2P Network</div>
+        <div class="feature-desc">Multiple miners can connect and sync. Blocks are broadcast to peers as they're mined. New nodes download and verify the full chain on join.</div>
+      </div>
+      <div class="feature-card fade-in-2">
+        <div class="feature-icon">💰</div>
+        <div class="feature-title">UTXO Model</div>
+        <div class="feature-desc">Unspent Transaction Output tracking in memory, just like Bitcoin. Spend verification checks the UTXO set before including transactions in blocks.</div>
+      </div>
+      <div class="feature-card fade-in-3">
+        <div class="feature-icon">🌳</div>
+        <div class="feature-title">Merkle Tree</div>
+        <div class="feature-desc">Transaction IDs are hashed into a Merkle root stored in the block header, allowing efficient transaction inclusion proofs.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Auto-refresh ticker every 10 seconds
+setInterval(function() {
+  fetch('/api/stats').then(r => r.json()).then(d => {
+    document.getElementById('tick-blocks').textContent = d.block_count;
+    document.getElementById('tick-txns').textContent = d.tx_count;
+    document.getElementById('tick-mempool').textContent = d.mempool_count;
+    document.getElementById('tick-miners').textContent = d.miner_count;
+  }).catch(() => {});
+}, 10000);
+</script>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Transaction{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title">Transaction</div>
+</div>
+<div class="main-content">
+  <div class="card mb-3">
+    <div class="detail-hash">{{ tx.TxId }}</div>
+    <div class="detail-row"><div class="detail-key">Block Height</div><div class="detail-val"><a href="{{ url_for('block_detail', block_hash=tx.block_hash) }}" style="color:#60a5fa;">{{ tx.block_height if tx.block_height else '—' }}</a></div></div>
+    <div class="detail-row"><div class="detail-key">Status</div><div class="detail-val"><span class="badge {{ 'badge-confirmed' if tx.block_height else 'badge-pending' }}">{{ 'Confirmed' if tx.block_height else 'Unconfirmed' }}</span></div></div>
+    <div class="detail-row">
+      <div class="detail-key">Transaction Fee</div>
+      <div class="detail-val">
+        {% if tx.tx_ins | length > 0 and not (tx.tx_ins[0].prev_tx == '0' * 64) %}
+          0.00100000 BTC (100,000 satoshis)
+        {% else %}
+          — (Coinbase)
+        {% endif %}
+      </div>
+    </div>
+    <div class="detail-row"><div class="detail-key">Version</div><div class="detail-val">{{ tx.version }}</div></div>
+    <div class="detail-row"><div class="detail-key">Locktime</div><div class="detail-val">{{ tx.locktime }} {% if tx.locktime == 0 %}<span style="color:#94a3b8;font-size:11px;">(no lock — mines immediately)</span>{% endif %}</div></div>
+  </div>
+
+  <h2 style="font-family:'Orbitron',monospace;font-size:1.2rem;margin-bottom:1rem;">Transaction Detail</h2>
+  <div class="tx-card">
+    <div class="tx-io">
+      <div>
+        <div class="tx-io-title">Inputs</div>
+        {% for inp in tx.tx_ins %}
+        <div class="tx-chip {{ 'coinbase' if inp.prev_tx == '0'*64 else '' }}">
+          {% if inp.prev_tx == '0'*64 %}
+            #0 Coinbase
+          {% else %}
+            <a href="{{ url_for('tx_detail', txid=inp.prev_tx) }}" style="color:#60a5fa;text-decoration:none;">{{ inp.prev_tx }}</a>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <div>
+        <div class="tx-io-title">Outputs</div>
+        {% for out in tx.tx_outs %}
+        <div class="tx-chip">
+          #{{ loop.index0 }}
+          {% if out.script_pubKey.cmds|length > 2 %}
+            <a href="{{ url_for('address_detail', address=out.script_pubKey.cmds[2]) }}" style="color:#60a5fa;text-decoration:none;">{{ out.script_pubKey.cmds[2] }}</a>
+          {% endif %}
+          : {{ "%.8f"|format(out.amount / 100000000) }} BTC
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

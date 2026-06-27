@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Transactions{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title">📋 Transactions</div>
+  <div class="page-subtitle">All confirmed transactions across all blocks</div>
+</div>
+<div class="main-content">
+  <div class="card">
+    <table class="data-table">
+      <thead>
+        <tr><th>TX ID</th><th>Block</th><th>Status</th><th>Inputs</th><th>Outputs</th></tr>
+      </thead>
+      <tbody>
+        {% for tx in transactions %}
+        <tr>
+          <td><a class="hash-link" href="{{ url_for('tx_detail', txid=tx.TxId) }}">{{ tx.TxId[:32] }}…</a></td>
+          <td style="font-family:'Orbitron',monospace;font-size:12px;color:#a78bfa;">{{ tx.block_height }}</td>
+          <td><span class="badge badge-confirmed">Confirmed</span></td>
+          <td>{{ tx.tx_ins|length }}</td>
+          <td>{{ tx.tx_outs|length }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted" style="padding:3rem;">No transactions yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

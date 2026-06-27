@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Block #{{ block.Height }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title">BLOCK #{{ block.Height }}</div>
+  <div class="page-subtitle">Full block details and contained transactions</div>
+</div>
+<div class="main-content">
+  <div class="card mb-3">
+    <div class="detail-hash">{{ block.BlockHeader.blockHash }}</div>
+    <div class="detail-row"><div class="detail-key">Previous Block Hash</div><div class="detail-val"><a class="hash-link" href="{{ url_for('block_detail', block_hash=block.BlockHeader.prevBlockHash) }}">{{ block.BlockHeader.prevBlockHash }}</a></div></div>
+    <div class="detail-row"><div class="detail-key">Total Transactions</div><div class="detail-val">{{ block.TxCount }}</div></div>
+    <div class="detail-row"><div class="detail-key">Block Size</div><div class="detail-val">{{ block.BlockSize }} bytes</div></div>
+    <div class="detail-row"><div class="detail-key">Merkle Root</div><div class="detail-val">{{ block.BlockHeader.merkleRoot }}</div></div>
+    <div class="detail-row"><div class="detail-key">Nonce</div><div class="detail-val">{{ block.BlockHeader.nonce }}</div></div>
+    <div class="detail-row"><div class="detail-key">Timestamp</div><div class="detail-val">{{ block.BlockHeader.timestamp }}</div></div>
+    <div class="detail-row"><div class="detail-key">Version</div><div class="detail-val">{{ block.BlockHeader.version }}</div></div>
+    <div class="detail-row"><div class="detail-key">Bits</div><div class="detail-val">{{ block.BlockHeader.bits }}</div></div>
+  </div>
+
+  <h2 style="font-family:'Orbitron',monospace;font-size:1.2rem;margin-bottom:1rem;">Transactions</h2>
+
+  {% for tx in block.Txs %}
+  <div class="tx-card">
+    <a class="tx-id" href="{{ url_for('tx_detail', txid=tx.TxId) }}">{{ tx.TxId }}</a>
+    <div class="tx-io">
+      <div>
+        <div class="tx-io-title">Inputs</div>
+        {% for inp in tx.tx_ins %}
+        <div class="tx-chip {{ 'coinbase' if inp.prev_tx == '0'*64 else '' }}">
+          {% if inp.prev_tx == '0'*64 %}
+            #0 Coinbase
+          {% else %}
+            #{{ loop.index0 }} {{ inp.prev_tx[:20] }}…
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <div>
+        <div class="tx-io-title">Outputs</div>
+        {% for out in tx.tx_outs %}
+        <div class="tx-chip">
+          #{{ loop.index0 }}
+          {% if out.script_pubKey.cmds|length > 2 %}
+            <a href="{{ url_for('address_detail', address=out.script_pubKey.cmds[2]) }}" style="color:#60a5fa;text-decoration:none;">{{ out.script_pubKey.cmds[2][:16] if out.script_pubKey.cmds[2]|length > 16 else out.script_pubKey.cmds[2] }}…</a>
+          {% endif %}
+          : {{ "%.4f"|format(out.amount / 100000000) }} BTC
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

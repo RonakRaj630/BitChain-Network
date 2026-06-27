@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>{% block title %}BitChain{% endblock %} &mdash; BitChain Network</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⛏️</text></svg>">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+  <canvas id="bg-canvas"></canvas>
+
+  <div class="page-wrapper">
+
+    <nav class="navbar">
+      <a href="{{ url_for('index') }}" class="nav-logo">
+        <div class="nav-logo-icon">BC</div>
+        <div>
+          <div class="nav-logo-text">BITCHAIN</div>
+          <div class="nav-logo-sub">Blockchain Network</div>
+        </div>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="{{ url_for('index') }}"
+            class="{{ 'active' if request.endpoint == 'index'        else '' }}">Home</a></li>
+        <li><a href="{{ url_for('blocks') }}"
+            class="{{ 'active' if request.endpoint == 'blocks'       else '' }}">Blocks</a></li>
+        <li><a href="{{ url_for('transactions') }}"
+            class="{{ 'active' if request.endpoint == 'transactions' else '' }}">Transactions</a></li>
+        <li><a href="{{ url_for('mempool') }}"
+            class="{{ 'active' if request.endpoint == 'mempool'      else '' }}">MemPool</a></li>
+        {% if session.get('address') %}
+        <li><a href="{{ url_for('wallet') }}"
+            class="{{ 'active' if request.endpoint == 'wallet'       else '' }}">Wallet</a></li>
+        {% endif %}
+      </ul>
+
+      <form class="nav-search" action="{{ url_for('search') }}" method="get">
+        <input type="text" name="q" placeholder="Search block, transaction or address&hellip;" autocomplete="off">
+        <button type="submit">&#128269;</button>
+      </form>
+
+      <div class="nav-auth">
+        {% if session.get('address') %}
+        <div class="nav-user">
+          <div class="nav-user-dot" id="miningDot"></div>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:11px;">
+            {{ session['address'][:8] }}&hellip;{{ session['address'][-4:] }}
+          </span>
+        </div>
+        <form action="{{ url_for('logout') }}" method="post" style="margin:0;" id="logoutForm">
+          <button type="submit" class="btn btn-danger" style="padding:0.35rem 0.85rem;font-size:13px;">Logout</button>
+        </form>
+        {% else %}
+        <a href="{{ url_for('login') }}" class="btn btn-outline"
+          style="padding:0.35rem 0.85rem;font-size:13px;">Login</a>
+        <a href="{{ url_for('register') }}" class="btn btn-primary"
+          style="padding:0.35rem 0.85rem;font-size:13px;">Register</a>
+        {% endif %}
+      </div>
+    </nav>
+
+    {% block content %}{% endblock %}
+
+    <footer class="footer">
+      <span>BitChain Network &mdash; Built from scratch in Python &nbsp;&middot;&nbsp; Powered by secp256k1 ECC</span>
+    </footer>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='js/network.js') }}"></script>
+
+  <script>
+    // Prevent back-button returning to protected pages after logout
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', window.location.href);
+    }
+
+    {% if session.get('address') %}
+
+    // Heartbeat: tells server this tab is still open (every 10 s)
+    setInterval(function () {
+      fetch('/api/heartbeat', { method: 'POST' }).catch(function () { });
+    }, 30000);
+
+    // Mining state — controls the navbar dot colour
+    var _miningActive = false;
+
+    function setMiningState(active) {
+      _miningActive = active;
+      var dot = document.getElementById('miningDot');
+      if (!dot) { return; }
+      if (active) {
+        dot.style.background = '#22c55e';
+        dot.style.boxShadow = '0 0 8px #22c55e';
+      } else {
+        dot.style.background = '#ef4444';
+        dot.style.boxShadow = '0 0 8px #ef4444';
+      }
+    }
+
+    // Sync dot colour with real server state on every page load
+    fetch('/api/mining_status')
+      .then(function (r) { return r.json(); })
+      .then(function (d) { setMiningState(d.running); })
+      .catch(function () { });
+
+    // Expose so wallet.html can call it
+    window._setMiningState = setMiningState;
+
+    {% endif %}
+  </script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+
+</html>

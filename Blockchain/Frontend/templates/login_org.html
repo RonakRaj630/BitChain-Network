@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <title>Bitcoin Login</title>
+</head>
+
+<body>
+    <div class="wallet-container">
+        <h1>⛏️ Bitcoin Miner Login</h1>
+        <form action="/login" id="form" method="post">
+            <label>Your Bitcoin Address:</label><br>
+            <input type="text" name="address" placeholder="1BgFzbYT..."><br>
+            <label>Your Private Key:</label><br>
+            <input type="password" name="privateKey" placeholder="Enter private key"><br>
+            <span>{{ msg }}</span><br>
+            <input type="submit" value="Login & Start Mining">
+        </form>
+        <br>
+        <form action="/register" method="post">
+            <input type="submit" value="Create New Account">
+        </form>
+    </div>
+</body>
+
+</html>

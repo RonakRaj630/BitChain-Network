@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Memory Pool{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title">⏳ Memory Pool</div>
+  <div class="page-subtitle">Unconfirmed transactions awaiting mining</div>
+</div>
+<div class="main-content">
+  {% if txns %}
+  <div class="card mb-3" style="padding:1rem 1.5rem;">
+    <div style="font-family:'Orbitron',monospace;font-size:1.4rem;margin-bottom:0.25rem;">{{ txns|length }} Transactions</div>
+    <div style="color:rgba(255,255,255,0.6);font-size:13px;">Waiting to be mined into the next block</div>
+  </div>
+
+  <div class="card">
+    <form action="{{ url_for('mine_selected') }}" method="post">
+    <table class="data-table">
+      <thead>
+        <tr><th>Select</th><th>Transaction ID</th><th>Amount</th><th>Miner Fee</th><th>Status</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for tx in txns %}
+        <tr>
+          <td>
+            {% if session.get('address') and not tx.is_sender and not tx.is_receiver and not tx.is_selected %}
+              <input type="checkbox" name="txids" value="{{ tx.txid }}" class="tx-checkbox" onchange="updateMineButton()">
+            {% endif %}
+          </td>
+          <td>
+            <a class="hash-link" href="{{ url_for('mempool_tx', txid=tx.txid) }}">{{ tx.txid }}</a>
+          </td>
+          <td style="font-family:'Share Tech Mono',monospace;font-size:13px;">
+            {{ "%.4f"|format(tx.amount / 100000000) }} BTC
+          </td>
+          <td style="font-family:'Share Tech Mono',monospace;font-size:13px;color:#fde047;">
+            {{ "%.6f"|format(tx.fee / 100000000) }} BTC
+          </td>
+          <td>
+            {% if tx.is_selected %}
+              <span class="badge badge-success" style="background: rgba(34,197,94,0.2); color:#4ade80;">Being Verified</span>
+            {% else %}
+              <span class="badge badge-pending">Unconfirmed</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if tx.is_sender %}
+              <button type="submit" formmethod="post" formaction="{{ url_for('cancel_tx', txid=tx.txid) }}" class="btn btn-danger" style="padding: 2px 8px; font-size: 12px;">Cancel TX</button>
+            {% elif tx.is_selected %}
+              <input type="hidden" name="txid" value="{{ tx.txid }}">
+              <button type="submit" formmethod="post" formaction="{{ url_for('cancel_verification') }}" class="btn btn-warning" style="padding: 2px 8px; font-size: 12px; background: #fb923c; border:none; color:white;">Stop Verifying</button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if session.get('address') %}
+    <div style="margin-top: 15px; text-align: right;">
+      <button type="submit" id="btn-mine-selected" class="btn btn-primary" style="padding: 8px 16px;" disabled>Confirm Selection & Mine</button>
+    </div>
+    {% endif %}
+    </form>
+  </div>
+  
+  <script>
+    function updateMineButton() {
+      const checkboxes = document.querySelectorAll('.tx-checkbox');
+      const mineBtn = document.getElementById('btn-mine-selected');
+      if (!mineBtn) return;
+      
+      let anyChecked = false;
+      checkboxes.forEach(cb => {
+        if (cb.checked) anyChecked = true;
+      });
+      
+      mineBtn.disabled = !anyChecked;
+    }
+    // Initialize state on page load
+    document.addEventListener('DOMContentLoaded', updateMineButton);
+  </script>
+  {% else %}
+  <div class="card">
+    <div class="empty-state">
+      <div class="empty-icon">⏳</div>
+      <div class="empty-text">0 Transactions to Mine</div>
+      <div class="text-muted mt-2" style="font-size:14px;">The memory pool is empty. Send a transaction to see it here.</div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

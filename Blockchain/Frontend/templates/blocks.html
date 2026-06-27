@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Blocks{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-title">📦 Latest Blocks</div>
+  <div class="page-subtitle">All mined blocks on the BitChain network</div>
+</div>
+<div class="main-content">
+  <div class="card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Height</th>
+          <th>Block Hash</th>
+          <th>Transactions</th>
+          <th>Size (bytes)</th>
+          <th>Prev Hash</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for block in blocks %}
+        <tr class="{{ 'highlight' if loop.first else '' }}">
+          <td><strong style="font-family:'Orbitron',monospace;font-size:13px;color:#a78bfa;">{{ block.Height }}</strong></td>
+          <td><a class="hash-link" href="{{ url_for('block_detail', block_hash=block.BlockHeader.blockHash) }}">{{ block.BlockHeader.blockHash }}</a></td>
+          <td>{{ block.TxCount }}</td>
+          <td>{{ block.BlockSize }}</td>
+          <td><a class="hash-link" href="{{ url_for('block_detail', block_hash=block.BlockHeader.prevBlockHash) }}">{{ block.BlockHeader.prevBlockHash[:20] }}…</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted" style="padding:3rem;">No blocks yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

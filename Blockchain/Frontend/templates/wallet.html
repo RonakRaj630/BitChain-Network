@@ -1,0 +1,496 @@
+{% extends "base.html" %}
+{% block title %}Wallet{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="flex-between">
+    <div>
+      <div class="page-title">⚡ My Wallet</div>
+      <div class="page-subtitle" style="font-family:'Share Tech Mono',monospace;font-size:12px;color:#a78bfa;">
+        {{ session['address'] }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MINING ACTIVE WARNING BANNER ── -->
+<div id="miningWarningBanner" style="display:none;position:sticky;top:70px;z-index:100;background:linear-gradient(90deg,rgba(234,179,8,0.15),rgba(168,85,247,0.15));border-bottom:1px solid rgba(234,179,8,0.4);padding:0.6rem 2rem;text-align:center;font-size:13px;color:#fde047;font-family:'Rajdhani',sans-serif;font-weight:600;letter-spacing:0.5px;">
+  ⛏️ Mining is running — <strong>Stop Mining before closing this tab</strong> to properly shut down the miner process.
+  &nbsp;&nbsp;
+  <button onclick="stopMining()" style="background:rgba(234,179,8,0.2);border:1px solid rgba(234,179,8,0.5);border-radius:6px;color:#fde047;padding:0.2rem 0.75rem;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;">Stop Now</button>
+</div>
+
+<div class="main-content">
+
+  <!-- ── STAT CARDS ── -->
+  <div class="stat-grid mb-3">
+    <div class="stat-card">
+      <div class="stat-label">Total Balance</div>
+      <div class="stat-val" id="stat-balance">{{ "%.4f"|format(balance) }}</div>
+      <div class="stat-sub" style="color:rgba(255,255,255,0.7)">BTC</div>
+      <div id="stat-locked-wrap" style="display:none;margin-top:6px;font-size:11px;font-family:'Share Tech Mono',monospace;">
+        <span style="color:#f59e0b;">🔒 <span id="stat-locked">0.0000</span> BTC locked</span><br>
+        <span style="color:#86efac;">✓ <span id="stat-available">0.0000</span> BTC available</span>
+      </div>
+    </div>
+    <div class="stat-card" id="card-utxos">
+      <div class="stat-label">Confirmed UTXOs</div>
+      <div class="stat-val" id="stat-utxos">{{ utxo_count }}</div>
+      <div class="stat-sub" style="color:rgba(255,255,255,0.7)">Unspent Outputs</div>
+    </div>
+    <div class="stat-card" id="card-session" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+      <div class="stat-label">MINED THIS SESSION</div>
+      <div class="stat-val" id="stat-session">0.0000</div>
+      <div class="stat-sub" style="color:rgba(255,255,255,0.7)">BTC since mining started</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Blocks Mined</div>
+      <div class="stat-val" id="stat-blocks">{{ blocks_mined }}</div>
+      <div class="stat-sub" style="color:rgba(255,255,255,0.7)">By this address</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Mempool Txns</div>
+      <div class="stat-val" id="stat-mempool">{{ mempool_count }}</div>
+      <div class="stat-sub" style="color:rgba(255,255,255,0.7)">Awaiting mining</div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+
+    <!-- ── SEND BTC ── -->
+    <div class="card-dark">
+      <div class="section-title" style="font-size:1.1rem;margin-bottom:1.5rem;">💸 Send BTC</div>
+
+      {% if send_msg %}
+      <div class="alert {{ 'alert-error' if '❌' in send_msg else 'alert-success' }}" style="display:block;line-height:1.8;">{{ send_msg | safe }}</div>
+
+      {% endif %}
+
+      <form action="{{ url_for('wallet') }}" method="post">
+        <div class="form-group">
+          <label class="form-label">From Address</label>
+          <input type="text" class="form-input mono" value="{{ session['address'] }}" readonly style="opacity:0.7;">
+        </div>
+        <div class="form-group">
+          <label class="form-label">To Address</label>
+          <input type="text" name="toAddress" class="form-input mono" placeholder="1Abc..." required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Amount (BTC)</label>
+          <input type="number" name="Amount" class="form-input" min="0.00000001" step="0.00000001" placeholder="0.001" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fee (BTC)</label>
+          <input type="number" name="Fee" class="form-input" min="0.00000001" step="0.00000001" placeholder="0.0001" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-full">🚀 Broadcast Transaction</button>
+      </form>
+    </div>
+
+    <!-- ── MINING CONTROL ── -->
+    <div class="card-dark">
+      <div class="section-title" style="font-size:1.1rem;margin-bottom:1.5rem;">⛏️ Mining Control</div>
+
+      <!-- Status display -->
+      <div style="text-align:center;padding:1.5rem 0 1rem;">
+        <div id="miningStatusIcon" style="font-size:3.5rem;margin-bottom:0.75rem;">⏸️</div>
+        <div id="miningStatusText" style="font-family:'Orbitron',monospace;font-size:1rem;font-weight:700;margin-bottom:0.25rem;color:#f1f5f9;">
+          Stopped
+        </div>
+        <div id="miningStatusSub" style="font-size:13px;color:#94a3b8;">
+          Click Start to begin mining blocks
+        </div>
+      </div>
+
+      <!-- Start / Stop buttons -->
+      <div style="display:flex;gap:0.75rem;margin-top:1rem;">
+        <button id="btnStart" onclick="startMining()"
+          class="btn btn-primary w-full btn-lg"
+          style="flex:1;justify-content:center;">
+          ▶ Start Mining
+        </button>
+        <button id="btnStop" onclick="stopMining()"
+          class="btn btn-danger w-full btn-lg"
+          style="flex:1;justify-content:center;display:none;">
+          ⏹ Stop Mining
+        </button>
+      </div>
+
+      <!-- Mining log -->
+      <div id="miningLog" style="margin-top:1rem;background:rgba(0,0,0,0.3);border-radius:8px;padding:0.75rem;font-family:'Share Tech Mono',monospace;font-size:11px;color:#94a3b8;min-height:48px;max-height:80px;overflow-y:auto;display:none;white-space:pre-line;">
+      </div>
+
+      <div class="mt-3" style="display:flex;gap:0.5rem;">
+        <a href="{{ url_for('address_detail', address=session['address']) }}"
+           class="btn btn-ghost w-full" style="flex:1;justify-content:center;font-size:13px;">
+          📊 Address History
+        </a>
+        <a href="{{ url_for('blocks') }}"
+           class="btn btn-ghost w-full" style="flex:1;justify-content:center;font-size:13px;">
+          📦 All Blocks
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── P2P NETWORK STATUS ── -->
+  <div class="card-dark mt-3" id="p2pPanel">
+    <div class="flex-between mb-2">
+      <div class="section-title" style="font-size:1.1rem;">🌐 P2P Network</div>
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <div id="p2pDot" style="width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 6px #ef4444;transition:all 0.3s;"></div>
+        <span id="p2pStatusText" style="font-size:12px;color:#94a3b8;font-family:'Share Tech Mono',monospace;">Disconnected</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <div style="flex:1;min-width:120px;background:rgba(0,0,0,0.2);border-radius:8px;padding:0.75rem;text-align:center;">
+        <div style="font-size:1.5rem;font-family:'Orbitron',monospace;font-weight:700;color:#a78bfa;" id="p2pPeerCount">0</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Connected Peers</div>
+      </div>
+      <div style="flex:1;min-width:120px;background:rgba(0,0,0,0.2);border-radius:8px;padding:0.75rem;text-align:center;">
+        <div style="font-size:1.5rem;font-family:'Orbitron',monospace;font-weight:700;color:#38bdf8;" id="p2pPort">—</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">My P2P Port</div>
+      </div>
+      <div style="flex:1;min-width:120px;background:rgba(0,0,0,0.2);border-radius:8px;padding:0.75rem;text-align:center;">
+        <div style="font-size:1.5rem;font-family:'Orbitron',monospace;font-weight:700;color:#34d399;" id="p2pBlocksRecv">0</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Blocks from Peers</div>
+      </div>
+    </div>
+    <div id="p2pPeerList" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:#64748b;min-height:24px;">
+      No peers connected yet — start mining to join the network
+    </div>
+  </div>
+
+  <!-- ── RECENT TRANSACTIONS ── -->
+  <div class="card-dark mt-3">
+    <div class="flex-between mb-2">
+      <div class="section-title" style="font-size:1.1rem;">Recent Transactions</div>
+      <a href="{{ url_for('address_detail', address=session['address']) }}"
+         class="btn btn-ghost" style="font-size:13px;">View All →</a>
+    </div>
+    <table class="data-table" id="recentTxTable">
+      <thead>
+        <tr><th>TX ID</th><th>Type</th><th>Amount</th><th>Block</th></tr>
+      </thead>
+      <tbody id="recentTxBody">
+        {% for tx in recent_txns %}
+        <tr>
+          <td><a class="hash-link" href="{{ url_for('tx_detail', txid=tx.txid) }}">{{ tx.txid[:24] }}…</a></td>
+          <td>
+            <span class="badge {{ 'badge-confirmed' if tx.type == 'received' else 'badge-pending' }}">
+              {{ '↓ received' if tx.type == 'received' else '↑ sent' }}
+            </span>
+          </td>
+          <td style="font-family:'Share Tech Mono',monospace;font-size:13px;color:{{ '#86efac' if tx.type == 'received' else '#fca5a5' }};">
+            <div>{{ '+' if tx.type == 'received' else '-' }}{{ "%.4f"|format(tx.amount / 100000000) }} BTC</div>
+            {% if tx.is_coinbase %}
+              {% if tx.fee > 0 %}
+              <div style="font-size:11px;color:#fde047;">Includes {{ "%.6f"|format(tx.fee / 100000000) }} BTC Fee</div>
+              {% endif %}
+            {% else %}
+              <div style="font-size:11px;color:#94a3b8;">Fee: {{ "%.6f"|format(tx.fee / 100000000) }} BTC</div>
+            {% endif %}
+          </td>
+          <td>{{ tx.block_height }}</td>
+        </tr>
+        {% else %}
+        <tr id="noTxRow"><td colspan="4" class="text-center text-muted" style="padding:1.5rem;">No transactions yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var _isMining = false;
+var _pollInterval = null;
+var _port = null;
+var _startBlockCount = null;
+
+
+
+// ── Persist mining log across refreshes ──
+function _saveMiningState(active, port) {
+  try {
+    sessionStorage.setItem('miningActive', active ? '1' : '0');
+    if (port) sessionStorage.setItem('miningPort', port);
+  } catch(e) {}
+}
+
+function _loadMiningLog() {
+  try {
+    var saved = sessionStorage.getItem('miningLog');
+    if (saved) {
+      _logLines = JSON.parse(saved);
+      var log = document.getElementById('miningLog');
+      if (log) {
+        log.style.display = 'block';
+        log.textContent = _logLines.join('\n');
+        log.scrollTop = log.scrollHeight;
+      }
+    }
+  } catch(e) {}
+}
+
+// ── On page load: check actual mining status from server ──
+fetch('/api/mining_status')
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.running) {
+      _port = d.port;
+      // Restore session start anchor from sessionStorage
+      try {
+        var saved = sessionStorage.getItem('startBlockCount');
+        if (saved !== null) _startBlockCount = parseInt(saved);
+      } catch(e) {}
+      _setMiningUI(true);
+      _loadMiningLog();
+      startPolling();
+    } else {
+      _setMiningUI(false);
+      // Clear saved log if not mining
+      try { sessionStorage.removeItem('miningLog'); } catch(e) {}
+    }
+  }).catch(function() {});
+
+// ── Poll wallet stats every 5 s while mining ──
+function startPolling() {
+  if (_pollInterval) return;
+  _pollInterval = setInterval(refreshStats, 5000);
+}
+function stopPolling() {
+  if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null; }
+}
+
+var _lastBlockCount  = null;
+function refreshStats() {
+  fetch('/api/wallet_stats')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var blocks = parseInt(d.blocks_mined);
+
+      // Total balance — only update if server returns a positive value
+      var serverBal = parseFloat(d.balance);
+      var shownBal  = parseFloat(document.getElementById('stat-balance').textContent);
+      if (serverBal > 0) {
+        document.getElementById('stat-balance').textContent = serverBal.toFixed(4);
+      } else if (shownBal < 0) {
+        // Negative shown — fetch from DB directly
+        fetch('/balance').then(function(r){return r.json();}).then(function(b){
+          if (b.balance > 0) document.getElementById('stat-balance').textContent = b.balance.toFixed(4);
+        }).catch(function(){});
+      }
+
+      // Show locked/available if any coins are locked in pending txns
+      var locked    = parseFloat(d.locked    || 0);
+      var available = parseFloat(d.available || serverBal);
+      var lockWrap  = document.getElementById('stat-locked-wrap');
+      if (locked > 0 && lockWrap) {
+        document.getElementById('stat-locked').textContent    = locked.toFixed(4);
+        document.getElementById('stat-available').textContent = available.toFixed(4);
+        lockWrap.style.display = 'block';
+      } else if (lockWrap) {
+        lockWrap.style.display = 'none';
+      }
+
+      if (document.getElementById('stat-utxos')) {
+        document.getElementById('stat-utxos').textContent = d.utxo_count;
+      }
+
+      if (document.getElementById('stat-session')) {
+        if (_isMining && _startBlockCount !== null) {
+          var sessionBlocks = Math.max(0, blocks - _startBlockCount);
+          var sessionMined = sessionBlocks * 3.125; // 3.125 is the block reward
+          document.getElementById('stat-session').textContent = sessionMined.toFixed(4);
+        } else {
+          document.getElementById('stat-session').textContent = "0.0000";
+        }
+      }
+      document.getElementById('stat-blocks').textContent   = blocks;
+      document.getElementById('stat-mempool').textContent  = d.mempool_count;
+
+      // Log new blocks
+      if (_isMining && _lastBlockCount !== null && blocks > _lastBlockCount) {
+        var balText = document.getElementById('stat-balance').textContent;
+        _log('⛏️ Block ' + blocks + ' mined! Balance: ' + balText + ' BTC');
+      }
+      _lastBlockCount = blocks;
+
+      // Sync mining state in case process died
+      if (_isMining && !d.mining_active) {
+        _setMiningUI(false);
+        _saveMiningState(false, null);
+        _log('⚠️ Miner stopped unexpectedly.');
+      }
+    }).catch(function() {});
+}
+
+// ── Start Mining ──
+function startMining() {
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnStart').textContent = '⏳ Starting…';
+
+  fetch('/api/start_miner', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        _setMiningUI(true);
+        _port = d.port;
+        _sessionBlocks = 0;
+        // Capture current block count as the start anchor
+        fetch('/api/wallet_stats')
+          .then(function(r) { return r.json(); })
+          .then(function(s) {
+            _startBlockCount = parseInt(s.blocks_mined);
+            try { sessionStorage.setItem('startBlockCount', _startBlockCount); } catch(e) {}
+            if (document.getElementById('stat-session')) {
+                document.getElementById('stat-session').textContent = "0.0000";
+            }
+          }).catch(function() { _startBlockCount = parseInt(document.getElementById('stat-blocks').textContent) || 0; });
+        _saveMiningState(true, d.port);
+        _log('✅ Miner started on port ' + d.port);
+        startPolling();
+        setTimeout(refreshStats, 2000);
+      } else {
+        document.getElementById('btnStart').disabled = false;
+        document.getElementById('btnStart').textContent = '▶ Start Mining';
+        _log('❌ Failed to start: ' + (d.error || 'unknown error'));
+      }
+    })
+    .catch(function(err) {
+      document.getElementById('btnStart').disabled = false;
+      document.getElementById('btnStart').textContent = '▶ Start Mining';
+      _log('❌ Network error: ' + err);
+    });
+}
+
+// ── Stop Mining ──
+function stopMining() {
+  document.getElementById('btnStop').disabled = true;
+  document.getElementById('btnStop').textContent = '⏳ Stopping…';
+
+  fetch('/api/stop_miner', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      _setMiningUI(false);
+      stopPolling();
+      _saveMiningState(false, null);
+      try { sessionStorage.removeItem('miningLog'); } catch(e) {}
+      _log('🛑 Miner stopped.');
+    })
+    .catch(function() {
+      _setMiningUI(false);
+      stopPolling();
+    });
+}
+
+// ── Update UI based on mining state ──
+function _setMiningUI(active) {
+  _isMining = active;
+
+  var btnStart = document.getElementById('btnStart');
+  var btnStop  = document.getElementById('btnStop');
+  var icon     = document.getElementById('miningStatusIcon');
+  var text     = document.getElementById('miningStatusText');
+  var sub      = document.getElementById('miningStatusSub');
+  var log      = document.getElementById('miningLog');
+
+  if (active) {
+    btnStart.style.display = 'none';
+    btnStop.style.display  = 'flex';
+    btnStop.disabled       = false;
+    btnStop.textContent    = '⏹ Stop Mining';
+
+    icon.textContent = '⛏️';
+    icon.style.animation = 'mining-pulse 1s ease-in-out infinite';
+    text.textContent = 'Mining Active';
+    text.style.color = '#86efac';
+    sub.textContent  = 'Finding blocks…';
+    log.style.display = 'block';
+  } else {
+    btnStart.style.display = 'flex';
+    btnStart.disabled      = false;
+    btnStart.textContent   = '▶ Start Mining';
+    btnStop.style.display  = 'none';
+
+    icon.textContent = '⏸️';
+    icon.style.animation = '';
+    text.textContent = 'Stopped';
+    text.style.color = '#f1f5f9';
+    sub.textContent  = 'Click Start to begin mining blocks';
+  }
+
+  // Update navbar dot via base.html function
+  if (window._setMiningState) window._setMiningState(active);
+
+  // Show/hide the sticky warning banner
+  var banner = document.getElementById('miningWarningBanner');
+  if (banner) banner.style.display = active ? 'block' : 'none';
+}
+
+// ── Mining log ──
+var _logLines = [];
+function _log(msg) {
+  var log = document.getElementById('miningLog');
+  if (!log) return;
+  var time = new Date().toLocaleTimeString();
+  _logLines.push('[' + time + '] ' + msg);
+  if (_logLines.length > 20) _logLines.shift();
+  log.textContent = _logLines.join('\n');
+  log.scrollTop = log.scrollHeight;
+  // Persist log across page refreshes
+  try { sessionStorage.setItem('miningLog', JSON.stringify(_logLines)); } catch(e) {}
+}
+
+// Kick off polling if already mining on page load
+if (_isMining) startPolling();
+// ── P2P Network Status ──
+var _p2pBlocksRecv = 0;
+
+function refreshP2PStatus() {
+  fetch('/api/p2p_status')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var dot      = document.getElementById('p2pDot');
+      var statusTx = document.getElementById('p2pStatusText');
+      var peerCnt  = document.getElementById('p2pPeerCount');
+      var portEl   = document.getElementById('p2pPort');
+      var peerList = document.getElementById('p2pPeerList');
+      var blocksEl = document.getElementById('p2pBlocksRecv');
+
+      var count = d.peer_count || 0;
+      peerCnt.textContent = count;
+      portEl.textContent  = d.p2p_port || '—';
+
+      if (d.blocks_received > _p2pBlocksRecv) {
+        _p2pBlocksRecv = d.blocks_received;
+      }
+      blocksEl.textContent = _p2pBlocksRecv;
+
+      if (count > 0) {
+        dot.style.background = '#22c55e';
+        dot.style.boxShadow  = '0 0 8px #22c55e';
+        statusTx.textContent = 'Connected (' + count + ' peer' + (count > 1 ? 's' : '') + ')';
+        statusTx.style.color = '#86efac';
+        if (d.peers && d.peers.length > 0) {
+          peerList.innerHTML = d.peers.map(function(p) {
+            return '<span style="display:inline-block;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);border-radius:4px;padding:2px 8px;margin:2px;color:#c4b5fd;">⬡ ' + p + '</span>';
+          }).join('');
+        }
+      } else {
+        dot.style.background = d.miner_running ? '#f59e0b' : '#ef4444';
+        dot.style.boxShadow  = d.miner_running ? '0 0 8px #f59e0b' : '0 0 8px #ef4444';
+        statusTx.textContent = d.miner_running ? 'Mining — awaiting peers' : 'Disconnected';
+        statusTx.style.color = d.miner_running ? '#fde047' : '#94a3b8';
+        peerList.innerHTML   = '<span style="color:#475569;">No peers connected yet — start mining to join the network</span>';
+      }
+    }).catch(function() {});
+}
+
+setInterval(refreshP2PStatus, 5000);
+refreshP2PStatus();
+</script>
+{% endblock %}
