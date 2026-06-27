@@ -345,7 +345,7 @@ Add screenshots here, for example:
 
 # 👨‍💻 Author
 
-**Raj**
+**Ronak Raj**
 
 B.Tech Computer Science Engineering
 
