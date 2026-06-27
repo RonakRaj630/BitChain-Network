@@ -59,16 +59,27 @@ BitChain Network is an educational blockchain implementation that demonstrates t
 ```
 BitChain-Network/
 │
-├── blockchain/
+├── blockchain_project/
+│   ├── Backend/
+│   │   ├── core/
+│   │   └── util/
+│   │
+│   ├── Frontend/
+│   │   ├── static/
+│   │   └── templates/
+│   │
+│   ├── client/
+│   │
+│   └── run.py      ← Main application entry point
+│
 ├── data/
-├── static/
-├── templates/
-├── screenshots/
-├── run.py
-├── requirements.txt
+│   └── .gitkeep
+│
 ├── .env.example
+├── requirements.txt
 ├── README.md
-└── LICENSE
+├── LICENSE
+└── .gitignore
 ```
 
 ---
