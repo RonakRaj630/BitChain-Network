@@ -59,27 +59,41 @@ BitChain Network is an educational blockchain implementation that demonstrates t
 ```
 BitChain-Network/
 │
-├── blockchain_project/
-│   ├── Backend/
-│   │   ├── core/
-│   │   └── util/
+├── Blockchain/
 │   │
-│   ├── Frontend/
-│   │   ├── static/
-│   │   └── templates/
+│   ├── Backend/
+│   │   │
+│   │   ├── Core/
+│   │   │   ├── database/
+│   │   │   └── EllipticCurve/
+│   │   │
+│   │   └── util/
 │   │
 │   ├── client/
 │   │
-│   └── run.py      ← Main application entry point
+│   ├── Frontend/
+│   │   │
+│   │   ├── static/
+│   │   │   ├── css/
+│   │   │   └── js/
+│   │   │
+│   │   ├── templates/
+│   │   │
+│   │   └── run.py
+│   │       # Main Flask application entry point
+│   │
+│   └── ...
 │
 ├── data/
 │   └── .gitkeep
+│   # Runtime JSON files (account.json, blockchain.json,
+│   # pending_txn.json) are created automatically.
 │
 ├── .env.example
+├── .gitignore
 ├── requirements.txt
 ├── README.md
-├── LICENSE
-└── .gitignore
+└── LICENSE
 ```
 
 ---
