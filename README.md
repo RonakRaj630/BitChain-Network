@@ -78,11 +78,10 @@ BitChain-Network/
 │   │   │   └── js/
 │   │   │
 │   │   ├── templates/
-│   │   │
-│   │   └── run.py
-│   │       # Main Flask application entry point
+│   │       
 │   │
-│   └── ...
+│   └── run.py
+|       # Main Flask application entry point
 │
 ├── data/
 │   └── .gitkeep
